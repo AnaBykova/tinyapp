@@ -74,3 +74,14 @@ app.post("/urls", (req, res) => {
   res.redirect(`/urls/${id}`); // Redirect the user to the newly created short URL page
   //res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
+
+app.get("/u/:id", (req, res) => {
+  const id = req.params.id;
+  const longURL = urlDatabase[id];
+
+  if (longURL) {
+    res.redirect(longURL); // Redirect to the longURL if it exists
+  } else {
+    res.status(404).send("Short URL not found"); // Respond with a 404 error if the short URL is not found
+  }
+});
