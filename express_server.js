@@ -9,6 +9,19 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+function generateRandomString() {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  const length = 6;
+
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * characters.length);
+    result += characters.charAt(randomIndex);
+  }
+
+  return result;
+}
+
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
@@ -47,5 +60,17 @@ app.get("/urls/:id", (req, res) => {
 
 app.post("/urls", (req, res) => {
   console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  const longURL = req.body.longURL; // Get the longURL from the form data
+
+  // Generate a unique id using the generateRandomString function
+  const id = generateRandomString();
+
+  // Save the id-longURL pair to the urlDatabase
+  urlDatabase[id] = longURL;
+
+  console.log(req.body); // Log the POST request body to the console
+  console.log(urlDatabase); // Log the updated urlDatabase to the console
+
+  res.redirect(`/urls/${id}`); // Redirect the user to the newly created short URL page
+  //res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
