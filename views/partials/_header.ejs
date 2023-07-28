@@ -18,8 +18,10 @@
         <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
     </div>
-  
-
+    
+    <% if (username) { %>
+      <p style="color: white; margin: 0 1rem;">Logged in as <%= username %></p>
+    <% } %>
 
     <!-- The login form -->
     <form action="/login" method="post">
