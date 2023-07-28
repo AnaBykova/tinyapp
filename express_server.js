@@ -85,3 +85,19 @@ app.get("/u/:id", (req, res) => {
     res.status(404).send("Short URL not found"); // Respond with a 404 error if the short URL is not found
   }
 });
+
+app.post("/urls/:id/delete", (req, res) => {
+  const id = req.params.id;
+
+  // Check if the URL with the given ID exists in the urlDatabase
+  if (urlDatabase[id]) {
+    // Use the delete operator to remove the URL from the urlDatabase
+    delete urlDatabase[id];
+
+    // Redirect the client back to the urls_index page ("/urls")
+    res.redirect("/urls");
+  } else {
+    // If the URL with the given ID does not exist, respond with a 404 error
+    res.status(404).send("URL not found");
+  }
+});
