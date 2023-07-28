@@ -20,16 +20,20 @@
     </div>
     
     <% if (username) { %>
+      <!-- Show username and logout form if the user is logged in -->
       <p style="color: white; margin: 0 1rem;">Logged in as <%= username %></p>
+      <form action="/logout" method="post" style="display: inline;">
+        <button type="submit" class="btn btn-link">Logout</button>
+      </form>
+    <% } else { %>
+      <!-- Show the login form if the user is not logged in -->
+      <form action="/login" method="post" style="display: inline;">
+        <!-- Single text input for the username -->
+        <input type="text" name="username" placeholder="Username" required>
+
+        <!-- Submit button to submit the form -->
+        <button type="submit">Login</button>
+      </form>
     <% } %>
-
-    <!-- The login form -->
-    <form action="/login" method="post">
-      <!-- Single text input for the username -->
-      <input type="text" name="username" placeholder="Username" required>
-
-      <!-- Submit button to submit the form -->
-      <button type="submit">Login</button>
-    </form>
   </nav>
 </header>

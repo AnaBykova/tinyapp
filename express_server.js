@@ -146,3 +146,11 @@ app.use((req, res, next) => {
   res.locals.username = req.cookies["username"] || null;
   next();
 });
+
+app.post("/logout", (req, res) => {
+  // Clear the "username" cookie by setting it to an empty value with an expired date
+  res.clearCookie("username");
+
+  // Redirect the user back to the /urls page
+  res.redirect("/urls");
+});
