@@ -118,3 +118,13 @@ app.post("/urls/:id", (req, res) => {
     res.status(404).send("URL not found");
   }
 });
+
+app.post("/login", (req, res) => {
+  const username = req.body.username; // Get the username from the request body
+
+  // Set the "username" cookie with the value from the form data
+  res.cookie("username", username);
+
+  // Redirect the browser back to the /urls page
+  res.redirect("/urls");
+});
