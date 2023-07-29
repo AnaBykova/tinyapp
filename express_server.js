@@ -1,14 +1,24 @@
 const express = require("express");
-const cookieParser = require("cookie-parser");
+//const cookieParser = require("cookie-parser");
+const cookieSession = require('cookie-session');
 const app = express();
-app.use(cookieParser());
-const PORT = 8080; // default port 8080
+//app.use(cookieParser());
+const PORT = 8080;
 
 const bcrypt = require("bcryptjs");
 const password = "purple-monkey-dinosaur"; // found in the req.body object
 const hashedPassword = bcrypt.hashSync(password, 10);
 
 app.set("view engine", "ejs");
+
+app.use(cookieSession({
+  name: 'session',
+  keys: ['your-secret-key'], // we can replace with our own secret keys for signing the cookies
+  maxAge: 24 * 60 * 60 * 1000, // Session will expire after 24 hours
+}));
+
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 const urlDatabase = {
   b6UTxQ: {
@@ -25,9 +35,12 @@ function generateRandomString() {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   const length = 6;
-  for (let i = 0; i < length; i++) {
+  while (result.length < length) {
     const randomIndex = Math.floor(Math.random() * characters.length);
-    result += characters.charAt(randomIndex);
+    const char = characters.charAt(randomIndex);
+    if (!result.includes(char)) {
+      result += char;
+    }
   }
   return result;
 }
@@ -55,17 +68,17 @@ const users = {
   userRandomID: {
     id: "userRandomID",
     email: "user@example.com",
-    password: "purple-monkey-dinosaur",
+    password: hashedPassword,
   },
   user2RandomID: {
     id: "user2RandomID",
     email: "user2@example.com",
-    password: "dishwasher-funk",
+    password: hashedPassword,
   },
 };
 
 const isLoggedInUrls = (req, res, next) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (user) {
     res.redirect("/urls");
   } else {
@@ -74,16 +87,13 @@ const isLoggedInUrls = (req, res, next) => {
 };
 
 const isLoggedInFeatures = (req, res, next) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (user) {
     next();
   } else {
-    res.redirect("/login"); // Redirect to the login page if the user is not logged in
+    res.redirect("/login");
   }
 };
-
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
@@ -102,7 +112,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/register", isLoggedInUrls, (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   const templateVars = {
     user,
   };
@@ -110,7 +120,7 @@ app.get("/register", isLoggedInUrls, (req, res) => {
 });
 
 app.get("/login", isLoggedInUrls, (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   const templateVars = {
     user,
   };
@@ -118,7 +128,7 @@ app.get("/login", isLoggedInUrls, (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, display a message suggesting to log in or register first
     const templateVars = {
@@ -138,7 +148,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.get("/urls/new", isLoggedInFeatures, (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   const templateVars = {
     user,
   };
@@ -146,7 +156,7 @@ app.get("/urls/new", isLoggedInFeatures, (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, display an error message
     res.status(401).send("Please log in or register to view this URL.");
@@ -185,7 +195,7 @@ app.get("/urls/:id", (req, res) => {
 });
 
 app.get("/urls/:id/delete", (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, display an error message
     res.status(401).send("Please log in or register to view this URL.");
@@ -243,7 +253,7 @@ app.get("/u/:id", (req, res) => {
 });
 
 app.post("/urls", isLoggedInFeatures, (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, respond with an HTML message
     // explaining why they cannot shorten URLs
@@ -262,7 +272,7 @@ app.post("/urls", isLoggedInFeatures, (req, res) => {
 });
 
 app.post("/urls/:id/delete", isLoggedInFeatures, (req, res) => {
-  const user = users[req.cookies["user_id"]];
+  const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, respond with an error message
     res.status(401).send("Please log in or register to delete this URL.");
@@ -311,13 +321,9 @@ app.post("/login", (req, res) => {
     res.status(403).send("User not found.");
     return;
   }
-
-  // Use bcrypt.compareSync to check if the provided password matches the stored hashed password
   const passwordMatch = bcrypt.compareSync(password, user.password);
-
   if (passwordMatch) {
-    // If the passwords match, set the user_id cookie with the matching user's ID
-    res.cookie("user_id", user.id);
+    req.session.user_id = user.id; // Set the user_id in the session
     res.redirect("/urls");
   } else {
     res.status(403).send("Incorrect password.");
@@ -326,12 +332,13 @@ app.post("/login", (req, res) => {
 
 // Middleware to set the username in res.locals
 app.use((req, res, next) => {
-  res.locals.user = users[req.cookies["user_id"]] || null;
+  res.locals.user = users[req.session.user_id] || null;
   next();
 });
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  //res.clearCookie("user_id");
+  req.session = null;
   res.redirect("/login");
 });
 
@@ -348,6 +355,5 @@ app.post("/register", (req, res) => {
   const hashedPassword = bcrypt.hashSync(password, 10);
   const userId = generateRandomString();
   users[userId] = { id: userId, email, password: hashedPassword }; // Save the hashed password
-  res.cookie("user_id", userId);
-  res.redirect("/urls");
+  res.redirect("/login");
 });
