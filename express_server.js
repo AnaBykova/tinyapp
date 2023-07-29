@@ -82,11 +82,19 @@ app.get("/urls/new", (req, res) => {
 });
 
 app.get("/register", (req, res) => {
-  res.render("urls_register");
+  const user = users[req.cookies["user_id"]];
+  const templateVars = { 
+    user,
+  };
+  res.render("urls_register", templateVars);
 });
 
 app.get("/login", (req, res) => {
-  res.render("urls_login");
+  const user = users[req.cookies["user_id"]];
+  const templateVars = { 
+    user,
+  };
+  res.render("urls_login", templateVars);
 });
 
 app.get("/urls/:id", (req, res) => {
@@ -163,12 +171,29 @@ app.post("/urls/:id", (req, res) => {
 });
 
 app.post("/login", (req, res) => {
-  const username = req.body.username; // Get the username from the request body
+  const email = req.body.email; // Get the email from the request body
+  const password = req.body.password; // Get the password from the request body
 
-  // Set the "username" cookie with the value from the form data
-  res.cookie("username", username);
+  if (!email || !password) {
+    res.status(400).send("Email and password cannot be empty.");
+    return;
+  }
 
-  // Redirect the browser back to the /urls page
+  const user = getUserByEmail(email);
+
+  if (!user) {
+    res.status(403).send("User not found.");
+    return;
+  }
+
+  if (user.password !== password) {
+    res.status(403).send("Incorrect password.");
+    return;
+  }
+
+  // If both checks pass, set the user_id cookie with the matching user's ID
+  res.cookie("user_id", user.id);
+
   res.redirect("/urls");
 });
 
@@ -179,34 +204,24 @@ app.use((req, res, next) => {
 });
 
 app.post("/logout", (req, res) => {
-  // Clear the "username" cookie by setting it to an empty value with an expired date
   res.clearCookie("user_id");
-  // Redirect the user back to the /urls page
-  res.redirect("/urls");
+  res.redirect("/login");
 });
 
-// POST /register endpoint to handle user registration
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
-
-  // Check if email or password is empty
   if (!email || !password) {
     res.status(400).send("Email and password cannot be empty.");
     return;
   }
 
-  // Check if email is already taken
   if (getUserByEmail(email)) {
     res.status(400).send("Email already registered. Please choose a different email.");
     return;
   }
 
-  // Generate a unique user ID using the generateRandomString function
   const userId = generateRandomString();
-  // Add the new user object to the users object
   users[userId] = { id: userId, email, password };
-  // Set a user_id cookie containing the user's newly generated ID
   res.cookie("user_id", userId);
-  // Redirect the user to the /urls page
   res.redirect("/urls");
 });
