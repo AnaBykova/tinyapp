@@ -15,32 +15,38 @@
   <%- include('partials/_header') %>
   <main style="margin: 1em;">
     <h3>My URLs</h3>
-    <table class="table">
-      <thead>
-        <tr>
-          <th scope="col">Short URL ID</th>
-          <th scope="col">Long URL</th>
-          <th scope="col">Actions</th>
-          <th scope="col">Edit</th> <!-- New Edit column -->
-        </tr>
-      </thead>
-      <tbody>
-        <% for (let id in urls) { %>
+    <% if (user) { %> <!-- Check if the user is logged in -->
+      <table class="table">
+        <thead>
           <tr>
-            <td><%= id %></td>
-            <td><%= urls[id] %></td>
-            <td>
-              <form method="POST" action="/urls/<%= id %>/delete">
-                <button type="submit" class="btn btn-danger">Delete</button>
-              </form>
-            </td>
-            <td>
-              <a href="/urls/<%= id %>">Edit</a>
-            </td> <!-- Edit link -->
+            <th scope="col">Short URL ID</th>
+            <th scope="col">Long URL</th>
+            <th scope="col">Actions</th>
+            <th scope="col">Edit</th> <!-- New Edit column -->
           </tr>
-        <% } %>
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          <% for (let id in urls) { %>
+            <% if (urls[id].userID === user.id) { %> <!-- Show URLs belonging to the logged-in user -->
+              <tr>
+                <td><%= id %></td>
+                <td><%= urls[id].longURL %></td>
+                <td>
+                  <form method="POST" action="/urls/<%= id %>/delete">
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                  </form>
+                </td>
+                <td>
+                  <a href="/urls/<%= id %>">Edit</a>
+                </td> <!-- Edit link -->
+              </tr>
+            <% } %>
+          <% } %>
+        </tbody>
+      </table>
+    <% } else { %> <!-- If the user is not logged in, display a message -->
+      <p>Please log in or register to view your URLs.</p>
+    <% } %>
   </main>
   <!-- Bootstrap JS -->
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
