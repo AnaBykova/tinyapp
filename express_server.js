@@ -20,8 +20,16 @@ function generateRandomString() {
     const randomIndex = Math.floor(Math.random() * characters.length);
     result += characters.charAt(randomIndex);
   }
-
   return result;
+}
+
+function getUserByEmail(email) {
+  for (const userId in users) {
+    if (users[userId].email === email) {
+      return users[userId];
+    }
+  }
+  return null;
 }
 
 const users = {
@@ -169,7 +177,6 @@ app.use((req, res, next) => {
 app.post("/logout", (req, res) => {
   // Clear the "username" cookie by setting it to an empty value with an expired date
   res.clearCookie("user_id");
-
   // Redirect the user back to the /urls page
   res.redirect("/urls");
 });
@@ -177,6 +184,19 @@ app.post("/logout", (req, res) => {
 // POST /register endpoint to handle user registration
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
+
+  // Check if email or password is empty
+  if (!email || !password) {
+    res.status(400).send("Email and password cannot be empty.");
+    return;
+  }
+
+  // Check if email is already taken
+  if (getUserByEmail(email)) {
+    res.status(400).send("Email already registered. Please choose a different email.");
+    return;
+  }
+
   // Generate a unique user ID using the generateRandomString function
   const userId = generateRandomString();
   // Add the new user object to the users object
