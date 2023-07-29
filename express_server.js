@@ -57,16 +57,18 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
+  const user = users[req.cookies["user_id"]];
   const templateVars = { 
-    username: req.cookies["username"],
+    user,
     urls: urlDatabase,
   };
   res.render("urls_index", templateVars);
 });
 
 app.get("/urls/new", (req, res) => {
+  const user = users[req.cookies["user_id"]];
   const templateVars = { 
-    username: req.cookies["username"],
+    user,
   };
   res.render("urls_new", templateVars);
 });
@@ -76,14 +78,13 @@ app.get("/register", (req, res) => {
 });
 
 app.get("/urls/:id", (req, res) => {
-  //const templateVars = { id: req.params.id, longURL: urlDatabase[id] };
-  //res.render("urls_show", templateVars);
+  const user = users[req.cookies["user_id"]];
   const id = req.params.id;
   const longURL = urlDatabase[id];
   const templateVars = { 
-    id: id, 
-    longURL: longURL,
-    username: req.cookies["username"] //|| null 
+    user,
+    id,
+    longURL,
   };
   res.render("urls_show", templateVars);
 });
@@ -161,13 +162,13 @@ app.post("/login", (req, res) => {
 
 // Middleware to set the username in res.locals
 app.use((req, res, next) => {
-  res.locals.username = req.cookies["username"] || null;
+  res.locals.user = users[req.cookies["user_id"]] || null;
   next();
 });
 
 app.post("/logout", (req, res) => {
   // Clear the "username" cookie by setting it to an empty value with an expired date
-  res.clearCookie("username");
+  res.clearCookie("user_id");
 
   // Redirect the user back to the /urls page
   res.redirect("/urls");
