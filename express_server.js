@@ -9,7 +9,7 @@ const bcrypt = require("bcryptjs");
 const password = "purple-monkey-dinosaur"; // found in the req.body object
 const hashedPassword = bcrypt.hashSync(password, 10);
 
-const { getUserByEmail } = require('./helpers'); 
+const { getUserByEmail } = require('./helpers');
 
 app.set("view engine", "ejs");
 
