@@ -15,7 +15,6 @@ function generateRandomString() {
   const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   const length = 6;
-
   for (let i = 0; i < length; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
     result += characters.charAt(randomIndex);
@@ -43,6 +42,24 @@ const users = {
     email: "user2@example.com",
     password: "dishwasher-funk",
   },
+};
+
+const isLoggedInUrls = (req, res, next) => {
+  const user = users[req.cookies["user_id"]];
+  if (user) {
+    res.redirect("/urls");
+  } else {
+    next();
+  }
+};
+
+const isLoggedInFeatures = (req, res, next) => {
+  const user = users[req.cookies["user_id"]];
+  if (user) {
+    next();
+  } else {
+    res.redirect("/login"); // Redirect to the login page if the user is not logged in
+  }
 };
 
 app.use(express.urlencoded({ extended: true }));
@@ -73,25 +90,25 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-app.get("/urls/new", (req, res) => {
+app.get("/urls/new", isLoggedInFeatures, (req, res) => {
   const user = users[req.cookies["user_id"]];
-  const templateVars = { 
+  const templateVars = {
     user,
   };
   res.render("urls_new", templateVars);
 });
 
-app.get("/register", (req, res) => {
+app.get("/register", isLoggedInUrls, (req, res) => {
   const user = users[req.cookies["user_id"]];
-  const templateVars = { 
+  const templateVars = {
     user,
   };
   res.render("urls_register", templateVars);
 });
 
-app.get("/login", (req, res) => {
+app.get("/login", isLoggedInUrls, (req, res) => {
   const user = users[req.cookies["user_id"]];
-  const templateVars = { 
+  const templateVars = {
     user,
   };
   res.render("urls_login", templateVars);
@@ -109,7 +126,15 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-app.post("/urls", (req, res) => {
+app.post("/urls", isLoggedInFeatures, (req, res) => {
+  const user = users[req.cookies["user_id"]];
+  if (!user) {
+    // If the user is not logged in, respond with an HTML message
+    // explaining why they cannot shorten URLs
+    res.status(401).send("You need to be logged in to create new tiny URLs.");
+    return;
+  }
+
   console.log(req.body); // Log the POST request body to the console
   const longURL = req.body.longURL; // Get the longURL from the form data
 
@@ -123,8 +148,8 @@ app.post("/urls", (req, res) => {
   console.log(urlDatabase); // Log the updated urlDatabase to the console
 
   res.redirect(`/urls/${id}`); // Redirect the user to the newly created short URL page
-  //res.send("Ok"); // Respond with 'Ok' (we will replace this)
 });
+
 
 app.get("/u/:id", (req, res) => {
   const id = req.params.id;
@@ -133,7 +158,19 @@ app.get("/u/:id", (req, res) => {
   if (longURL) {
     res.redirect(longURL); // Redirect to the longURL if it exists
   } else {
-    res.status(404).send("Short URL not found"); // Respond with a 404 error if the short URL is not found
+    // If the id does not exist in the urlDatabase, send a relevant HTML error message
+    const errorMessage = `
+      <html>
+        <head>
+          <title>Short URL not found</title>
+        </head>
+        <body>
+          <h2>Short URL not found</h2>
+          <p>The requested short URL with id '${id}' does not exist.</p>
+        </body>
+      </html>
+    `;
+    res.status(404).send(errorMessage);
   }
 });
 
