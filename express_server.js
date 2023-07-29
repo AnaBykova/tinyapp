@@ -85,6 +85,10 @@ app.get("/register", (req, res) => {
   res.render("urls_register");
 });
 
+app.get("/login", (req, res) => {
+  res.render("urls_login");
+});
+
 app.get("/urls/:id", (req, res) => {
   const user = users[req.cookies["user_id"]];
   const id = req.params.id;
