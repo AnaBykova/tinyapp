@@ -9,6 +9,8 @@ const bcrypt = require("bcryptjs");
 const password = "purple-monkey-dinosaur"; // found in the req.body object
 const hashedPassword = bcrypt.hashSync(password, 10);
 
+const { getUserByEmail } = require('./helpers'); 
+
 app.set("view engine", "ejs");
 
 app.use(cookieSession({
@@ -45,14 +47,16 @@ function generateRandomString() {
   return result;
 }
 
-function getUserByEmail(email) {
-  for (const userId in users) {
-    if (users[userId].email === email) {
-      return users[userId];
+/*
+function getUserByEmail(email, database) {
+  for (const userId in database) {
+    if (database[userId].email === email) {
+      return database[userId];
     }
   }
   return null;
 }
+*/
 
 function urlsForUser(id) {
   const filteredURLs = {};
@@ -316,7 +320,7 @@ app.post("/login", (req, res) => {
     res.status(400).send("Email and password cannot be empty.");
     return;
   }
-  const user = getUserByEmail(email);
+  const user = getUserByEmail(email, users);
   if (!user) {
     res.status(403).send("User not found.");
     return;
@@ -348,7 +352,7 @@ app.post("/register", (req, res) => {
     res.status(400).send("Email and password cannot be empty.");
     return;
   }
-  if (getUserByEmail(email)) {
+  if (getUserByEmail(email, users)) {
     res.status(400).send("Email already registered. Please choose a different email.");
     return;
   }
