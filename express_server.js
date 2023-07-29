@@ -24,7 +24,21 @@ function generateRandomString() {
   return result;
 }
 
+const users = {
+  userRandomID: {
+    id: "userRandomID",
+    email: "user@example.com",
+    password: "purple-monkey-dinosaur",
+  },
+  user2RandomID: {
+    id: "user2RandomID",
+    email: "user2@example.com",
+    password: "dishwasher-funk",
+  },
+};
+
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -156,5 +170,18 @@ app.post("/logout", (req, res) => {
   res.clearCookie("username");
 
   // Redirect the user back to the /urls page
+  res.redirect("/urls");
+});
+
+// POST /register endpoint to handle user registration
+app.post("/register", (req, res) => {
+  const { email, password } = req.body;
+  // Generate a unique user ID using the generateRandomString function
+  const userId = generateRandomString();
+  // Add the new user object to the users object
+  users[userId] = { id: userId, email, password };
+  // Set a user_id cookie containing the user's newly generated ID
+  res.cookie("user_id", userId);
+  // Redirect the user to the /urls page
   res.redirect("/urls");
 });
