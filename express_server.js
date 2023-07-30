@@ -86,17 +86,6 @@ const isLoggedInFeatures = (req, res, next) => {
   }
 };
 
-/*Test
-
-app.get("/", (req, res) => {
-  res.send("Hello!");
-});
-
-app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
-});
-*/
-
 // Middleware to set the username in res.locals
 app.use((req, res, next) => {
   res.locals.user = users[req.session.user_id] || null;
