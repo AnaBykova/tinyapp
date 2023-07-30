@@ -1,8 +1,6 @@
 const express = require("express");
-//const cookieParser = require("cookie-parser");
 const cookieSession = require('cookie-session');
 const app = express();
-//app.use(cookieParser());
 const PORT = 8080;
 
 const bcrypt = require("bcryptjs");
@@ -47,17 +45,6 @@ function generateRandomString() {
   return result;
 }
 
-/*
-function getUserByEmail(email, database) {
-  for (const userId in database) {
-    if (database[userId].email === email) {
-      return database[userId];
-    }
-  }
-  return null;
-}
-*/
-
 function urlsForUser(id) {
   const filteredURLs = {};
   for (const shortURL in urlDatabase) {
@@ -99,20 +86,20 @@ const isLoggedInFeatures = (req, res, next) => {
   }
 };
 
-app.listen(PORT, () => {
-  console.log(`Example app listening on port ${PORT}!`);
-});
-
+/*Test
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
 
-app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
-});
-
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
+});
+*/
+
+// Middleware to set the username in res.locals
+app.use((req, res, next) => {
+  res.locals.user = users[req.session.user_id] || null;
+  next();
 });
 
 app.get("/register", isLoggedInUrls, (req, res) => {
@@ -162,7 +149,6 @@ app.get("/urls/new", isLoggedInFeatures, (req, res) => {
 app.get("/urls/:id", (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
-    // If the user is not logged in, display an error message
     res.status(401).send("Please log in or register to view this URL.");
     return;
   }
@@ -260,40 +246,33 @@ app.post("/urls", isLoggedInFeatures, (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, respond with an HTML message
-    // explaining why they cannot shorten URLs
     res.status(401).send("You need to be logged in to create new tiny URLs.");
     return;
   }
-  console.log(req.body); // Log the POST request body to the console
-  const longURL = req.body.longURL; // Get the longURL from the form data
-  // Generate a unique id using the generateRandomString function
+  console.log(req.body);
+  const longURL = req.body.longURL;
   const id = generateRandomString();
-  // Save the id-longURL pair to the urlDatabase
   urlDatabase[id] = { longURL, userID: user.id };
   console.log(req.body); // Log the POST request body to the console
   console.log(urlDatabase); // Log the updated urlDatabase to the console
-  res.redirect(`/urls/${id}`); // Redirect the user to the newly created short URL page
+  res.redirect(`/urls/${id}`); 
 });
 
 app.post("/urls/:id/delete", isLoggedInFeatures, (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
-    // If the user is not logged in, respond with an error message
     res.status(401).send("Please log in or register to delete this URL.");
     return;
   }
   const id = req.params.id;
   if (!urlDatabase[id]) {
-    // If the URL with the given ID does not exist, respond with a 404 error
     res.status(404).send("URL not found.");
     return;
   }
   if (urlDatabase[id].userID !== user.id) {
-    // If the URL does not belong to the logged-in user, respond with an error message
     res.status(403).send("You do not have permission to delete this URL.");
     return;
   }
-  // If the user is logged in and owns the URL, delete the URL from the urlDatabase
   delete urlDatabase[id];
   res.redirect("/urls");
 });
@@ -334,12 +313,6 @@ app.post("/login", (req, res) => {
   }
 });
 
-// Middleware to set the username in res.locals
-app.use((req, res, next) => {
-  res.locals.user = users[req.session.user_id] || null;
-  next();
-});
-
 app.post("/logout", (req, res) => {
   //res.clearCookie("user_id");
   req.session = null;
@@ -359,5 +332,10 @@ app.post("/register", (req, res) => {
   const hashedPassword = bcrypt.hashSync(password, 10);
   const userId = generateRandomString();
   users[userId] = { id: userId, email, password: hashedPassword }; // Save the hashed password
-  res.redirect("/login");
+  req.session.user_id = userId;
+  res.redirect("/urls");
+});
+
+app.listen(PORT, () => {
+  console.log(`Example app listening on port ${PORT}!`);
 });
