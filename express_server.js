@@ -4,11 +4,10 @@ const app = express();
 const PORT = 8080;
 
 const bcrypt = require("bcryptjs");
-const password = "purple-monkey-dinosaur"; // found in the req.body object
-const hashedPassword = bcrypt.hashSync(password, 10);
 
 const { getUserByEmail,generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls} = require('./helpers');
 const { urlDatabase } = require('./database');
+const users = require('./users'); 
 
 app.set("view engine", "ejs");
 
@@ -20,39 +19,6 @@ app.use(cookieSession({
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-const users = {
-  userRandomID: {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: hashedPassword,
-  },
-  user2RandomID: {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: hashedPassword,
-  },
-};
-
-/*
-const isLoggedInUrls = (req, res, next) => {
-  const user = users[req.session.user_id];
-  if (user) {
-    res.redirect("/urls");
-  } else {
-    next();
-  }
-};
-
-const isLoggedInFeatures = (req, res, next) => {
-  const user = users[req.session.user_id];
-  if (user) {
-    next();
-  } else {
-    res.redirect("/login");
-  }
-};
-*/
 
 // Middleware to set the username in res.locals
 app.use((req, res, next) => {
