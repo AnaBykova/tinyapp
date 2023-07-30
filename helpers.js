@@ -34,8 +34,7 @@ function urlsForUser(id) {
   return filteredURLs;
 }
 
-/*
-const isLoggedInUrls = (req, res, next) => {
+const isLoggedInUrls = (users) => (req, res, next) => {
   const user = users[req.session.user_id];
   if (user) {
     res.redirect("/urls");
@@ -44,7 +43,7 @@ const isLoggedInUrls = (req, res, next) => {
   }
 };
 
-const isLoggedInFeatures = (req, res, next) => {
+const isLoggedInFeatures = (users) => (req, res, next) => {
   const user = users[req.session.user_id];
   if (user) {
     next();
@@ -52,7 +51,6 @@ const isLoggedInFeatures = (req, res, next) => {
     res.redirect("/login");
   }
 };
-*/
 
 
-module.exports = {getUserByEmail, generateRandomString, urlsForUser};
+module.exports = {getUserByEmail, generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls};

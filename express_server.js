@@ -7,9 +7,7 @@ const bcrypt = require("bcryptjs");
 const password = "purple-monkey-dinosaur"; // found in the req.body object
 const hashedPassword = bcrypt.hashSync(password, 10);
 
-const { getUserByEmail } = require('./helpers');
-const { generateRandomString } = require('./helpers');
-const { urlsForUser } = require('./helpers');
+const { getUserByEmail,generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls} = require('./helpers');
 const { urlDatabase } = require('./database');
 
 app.set("view engine", "ejs");
@@ -36,7 +34,7 @@ const users = {
   },
 };
 
-
+/*
 const isLoggedInUrls = (req, res, next) => {
   const user = users[req.session.user_id];
   if (user) {
@@ -54,6 +52,7 @@ const isLoggedInFeatures = (req, res, next) => {
     res.redirect("/login");
   }
 };
+*/
 
 // Middleware to set the username in res.locals
 app.use((req, res, next) => {
@@ -61,7 +60,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.get("/register", isLoggedInUrls, (req, res) => {
+app.get("/register", isLoggedInUrls(users), (req, res) => {
   const user = users[req.session.user_id];
   const templateVars = {
     user,
@@ -69,7 +68,7 @@ app.get("/register", isLoggedInUrls, (req, res) => {
   res.render("urls_register", templateVars);
 });
 
-app.get("/login", isLoggedInUrls, (req, res) => {
+app.get("/login", isLoggedInUrls(users), (req, res) => {
   const user = users[req.session.user_id];
   const templateVars = {
     user,
@@ -97,7 +96,7 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-app.get("/urls/new", isLoggedInFeatures, (req, res) => {
+app.get("/urls/new", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
   const templateVars = {
     user,
@@ -201,7 +200,7 @@ app.get("/u/:id", (req, res) => {
   }
 });
 
-app.post("/urls", isLoggedInFeatures, (req, res) => {
+app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
     // If the user is not logged in, respond with an HTML message
@@ -214,7 +213,7 @@ app.post("/urls", isLoggedInFeatures, (req, res) => {
   res.redirect(`/urls/${id}`); 
 });
 
-app.post("/urls/:id/delete", isLoggedInFeatures, (req, res) => {
+app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
     res.status(401).send("Please log in or register to delete this URL.");
