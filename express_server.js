@@ -8,6 +8,9 @@ const password = "purple-monkey-dinosaur"; // found in the req.body object
 const hashedPassword = bcrypt.hashSync(password, 10);
 
 const { getUserByEmail } = require('./helpers');
+const { generateRandomString } = require('./helpers');
+const { urlsForUser } = require('./helpers');
+const { urlDatabase } = require('./database');
 
 app.set("view engine", "ejs");
 
@@ -19,41 +22,6 @@ app.use(cookieSession({
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW",
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW",
-  },
-};
-
-function generateRandomString() {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  const length = 6;
-  while (result.length < length) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    const char = characters.charAt(randomIndex);
-    if (!result.includes(char)) {
-      result += char;
-    }
-  }
-  return result;
-}
-
-function urlsForUser(id) {
-  const filteredURLs = {};
-  for (const shortURL in urlDatabase) {
-    if (urlDatabase[shortURL].userID === id) {
-      filteredURLs[shortURL] = urlDatabase[shortURL];
-    }
-  }
-  return filteredURLs;
-}
 
 const users = {
   userRandomID: {
@@ -67,6 +35,7 @@ const users = {
     password: hashedPassword,
   },
 };
+
 
 const isLoggedInUrls = (req, res, next) => {
   const user = users[req.session.user_id];
@@ -239,12 +208,9 @@ app.post("/urls", isLoggedInFeatures, (req, res) => {
     res.status(401).send("You need to be logged in to create new tiny URLs.");
     return;
   }
-  console.log(req.body);
   const longURL = req.body.longURL;
   const id = generateRandomString();
   urlDatabase[id] = { longURL, userID: user.id };
-  console.log(req.body); // Log the POST request body to the console
-  console.log(urlDatabase); // Log the updated urlDatabase to the console
   res.redirect(`/urls/${id}`); 
 });
 
