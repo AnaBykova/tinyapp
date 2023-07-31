@@ -52,5 +52,43 @@ const isLoggedInFeatures = (users) => (req, res, next) => {
   }
 };
 
+// Function to handle URL not found errors
+const handleUrlNotFound = (req, res, next) => {
+  const id = req.params.id;
+  if (!urlDatabase[id] || !urlDatabase[id].longURL) {
+    const errorMessage = `
+      <html>
+        <head>
+          <title>Short URL not found</title>
+        </head>
+        <body>
+          <h2>Short URL not found</h2>
+          <p>The requested short URL with id '${id}' does not exist.</p>
+        </body>
+      </html>
+    `;
+    res.status(404).send(errorMessage);
+    return;
+  }
+  next();
+};
 
-module.exports = {getUserByEmail, generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls};
+// Function to check ownership and handle permissions check for URLs
+const checkUrlOwnership = (users) => (req, res, next) => {
+  const id = req.params.id;
+  const user = users[req.session.user_id];
+  if (urlDatabase[id].userID !== user.id) {
+    res.status(403).send("You do not have permission to view this URL.");
+    return;
+  }
+  next();
+};
+
+module.exports = {
+  getUserByEmail, 
+  generateRandomString, 
+  urlsForUser, 
+  isLoggedInFeatures, 
+  isLoggedInUrls, 
+  handleUrlNotFound,
+  checkUrlOwnership };

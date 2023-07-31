@@ -5,7 +5,16 @@ const PORT = 8080;
 
 const bcrypt = require("bcryptjs");
 
-const { getUserByEmail,generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls} = require('./helpers');
+const { 
+  getUserByEmail,
+  generateRandomString, 
+  urlsForUser, 
+  isLoggedInFeatures, 
+  isLoggedInUrls,
+  handleUrlNotFound,
+  checkUrlOwnership 
+} = require('./helpers');
+
 const { urlDatabase } = require('./database');
 const users = require('./users'); 
 
@@ -19,10 +28,8 @@ app.use(cookieSession({
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
-// Middleware to set the username in res.locals
 app.use((req, res, next) => {
-  res.locals.user = users[req.session.user_id] || null;
+  res.locals.user = req.session.user_id ? users[req.session.user_id] : null;
   next();
 });
 
@@ -45,7 +52,6 @@ app.get("/login", isLoggedInUrls(users), (req, res) => {
 app.get("/urls", (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
-    // If the user is not logged in, display a message suggesting to log in or register first
     const templateVars = {
       user,
       message: "Please log in or register to view your URLs.",
@@ -53,7 +59,6 @@ app.get("/urls", (req, res) => {
     res.render("urls_index", templateVars);
     return;
   }
-  // If the user is logged in, show only their URLs
   const userURLs = urlsForUser(user.id);
   const templateVars = {
     user,
@@ -70,36 +75,10 @@ app.get("/urls/new", isLoggedInFeatures(users), (req, res) => {
   res.render("urls_new", templateVars);
 });
 
-app.get("/urls/:id", (req, res) => {
-  const user = users[req.session.user_id];
-  if (!user) {
-    res.status(401).send("Please log in or register to view this URL.");
-    return;
-  }
+app.get("/urls/:id", handleUrlNotFound, checkUrlOwnership(users), (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
-  if (!longURL) {
-    // If the URL with the given ID does not exist, send a relevant HTML error message
-    const errorMessage = `
-      <html>
-        <head>
-          <title>Short URL not found</title>
-        </head>
-        <body>
-          <h2>Short URL not found</h2>
-          <p>The requested short URL with id '${id}' does not exist.</p>
-        </body>
-      </html>
-    `;
-    res.status(404).send(errorMessage);
-    return;
-  }
-  if (urlDatabase[id].userID !== user.id) {
-    // If the URL does not belong to the logged-in user, display an error message
-    res.status(403).send("You do not have permission to view this URL.");
-    return;
-  }
-  // If the user is logged in and the URL belongs to them, show the URL details
+  const user = users[req.session.user_id];
+  const longURL = urlDatabase[id].longURL;
   const templateVars = {
     user,
     id,
@@ -108,37 +87,8 @@ app.get("/urls/:id", (req, res) => {
   res.render("urls_show", templateVars);
 });
 
-app.get("/urls/:id/delete", (req, res) => {
-  const user = users[req.session.user_id];
-  if (!user) {
-    // If the user is not logged in, display an error message
-    res.status(401).send("Please log in or register to view this URL.");
-    return;
-  }
+app.get("/urls/:id/delete", handleUrlNotFound, checkUrlOwnership(users), (req, res) => {
   const id = req.params.id;
-  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
-  if (!longURL) {
-    // If the URL with the given ID does not exist, send a relevant HTML error message
-    const errorMessage = `
-      <html>
-        <head>
-          <title>Short URL not found</title>
-        </head>
-        <body>
-          <h2>Short URL not found</h2>
-          <p>The requested short URL with id '${id}' does not exist.</p>
-        </body>
-      </html>
-    `;
-    res.status(404).send(errorMessage);
-    return;
-  }
-  if (urlDatabase[id].userID !== user.id) {
-    // If the URL does not belong to the logged-in user, display an error message
-    res.status(403).send("You do not have permission to view this URL.");
-    return;
-  }
-  // If the user is logged in and the URL belongs to them, show the URL details
   delete urlDatabase[id];
   res.redirect("/urls");
 });
@@ -148,9 +98,8 @@ app.get("/u/:id", (req, res) => {
   const id = req.params.id;
   const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
   if (longURL) {
-    res.redirect(longURL); // Redirect to the longURL if it exists
+    res.redirect(longURL);
   } else {
-    // If the id does not exist in the urlDatabase, send a relevant HTML error message
     const errorMessage = `
       <html>
         <head>
@@ -169,7 +118,6 @@ app.get("/u/:id", (req, res) => {
 app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
-    // If the user is not logged in, respond with an HTML message
     res.status(401).send("You need to be logged in to create new tiny URLs.");
     return;
   }
@@ -200,22 +148,18 @@ app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
 
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
-  const newLongURL = req.body.longURL; // Get the new longURL from the form data
-  // Check if the URL with the given ID exists in the urlDatabase
+  const newLongURL = req.body.longURL;
   if (urlDatabase[id]) {
-    // Update the longURL for the given ID with the new value
     urlDatabase[id].longURL = newLongURL;
-    // Redirect the client back to the /urls page
     res.redirect("/urls");
   } else {
-    // If the URL with the given ID does not exist, respond with a 404 error
     res.status(404).send("URL not found");
   }
 });
 
 app.post("/login", (req, res) => {
-  const email = req.body.email; // Get the email from the request body
-  const password = req.body.password; // Get the password from the request body
+  const email = req.body.email;
+  const password = req.body.password;
   if (!email || !password) {
     res.status(400).send("Email and password cannot be empty.");
     return;
@@ -227,7 +171,7 @@ app.post("/login", (req, res) => {
   }
   const passwordMatch = bcrypt.compareSync(password, user.password);
   if (passwordMatch) {
-    req.session.user_id = user.id; // Set the user_id in the session
+    req.session.user_id = user.id;
     res.redirect("/urls");
   } else {
     res.status(403).send("Incorrect password.");
@@ -235,7 +179,6 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  //res.clearCookie("user_id");
   req.session = null;
   res.redirect("/login");
 });
