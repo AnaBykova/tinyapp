@@ -132,18 +132,22 @@ app.post("/urls", isLoggedInFeatures(users), (req, res) => {
 
 
 app.post("/urls/:id", (req, res) => {
-  const id = req.params.id;
-  const newLongURL = req.body.longURL; // Get the new longURL from the form data
-  // Check if the URL with the given ID exists in the urlDatabase
-  if (urlDatabase[id]) {
-    // Update the longURL for the given ID with the new value
-    urlDatabase[id].longURL = newLongURL;
-    // Redirect the client back to the /urls page
-    res.redirect("/urls");
-  } else {
-    // If the URL with the given ID does not exist, respond with a 404 error
-    res.status(404).send("URL not found");
-  }
+  checkURLAccess(req, res, () => {
+    const user = users[req.session.user_id];
+    const id = req.params.id;
+    const newLongURL = req.body.longURL;
+
+    // Check if the URL with the given ID exists in the urlDatabase
+    if (urlDatabase[id]) {
+      // Update the longURL for the given ID with the new value
+      urlDatabase[id].longURL = newLongURL;
+      // Redirect the client back to the /urls page
+      res.redirect("/urls");
+    } else {
+      // If the URL with the given ID does not exist, respond with a 404 error
+      res.status(404).send("URL not found");
+    }
+  }, users, urlDatabase);
 });
 
 
