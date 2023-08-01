@@ -32,7 +32,16 @@ app.use((req, res, next) => {
   next();
 });
 
-
+app.get("/", (req, res) => {
+  const user = users[req.session.user_id];
+  if (user) {
+    // If the user is logged in, redirect them to /urls
+    res.redirect("/urls");
+  } else {
+    // If the user is not logged in, redirect them to /login
+    res.redirect("/login");
+  }
+});
 
 app.get("/register", isLoggedInUrls(users), (req, res) => {
   const user = users[req.session.user_id];
@@ -107,7 +116,6 @@ app.get("/urls/:id/delete", (req, res) => {
 
 
 
-
 app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
@@ -120,6 +128,8 @@ app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   urlDatabase[id] = { longURL, userID: user.id };
   res.redirect(`/urls/${id}`); 
 });
+
+
 
 app.post("/urls/:id", (req, res) => {
   const id = req.params.id;
@@ -135,6 +145,8 @@ app.post("/urls/:id", (req, res) => {
     res.status(404).send("URL not found");
   }
 });
+
+
 
 app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
@@ -154,17 +166,6 @@ app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
   delete urlDatabase[id];
   res.redirect("/urls");
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -189,11 +190,15 @@ app.post("/login", (req, res) => {
   }
 });
 
+
+
 app.post("/logout", (req, res) => {
   //res.clearCookie("user_id");
   req.session = null;
   res.redirect("/login");
 });
+
+
 
 app.post("/register", (req, res) => {
   const { email, password } = req.body;
@@ -211,6 +216,8 @@ app.post("/register", (req, res) => {
   req.session.user_id = userId;
   res.redirect("/urls");
 });
+
+
 
 app.get("/u/:id", (req, res) => {
   const id = req.params.id;
@@ -233,6 +240,8 @@ app.get("/u/:id", (req, res) => {
     res.status(404).send(errorMessage);
   }
 });
+
+
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
