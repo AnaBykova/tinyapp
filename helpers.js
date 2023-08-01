@@ -52,10 +52,19 @@ const isLoggedInFeatures = (users) => (req, res, next) => {
   }
 };
 
-// Function to handle URL not found errors
-const handleUrlNotFound = (req, res, next) => {
+// Middleware to check URL access
+function checkURLAccess(req, res, next, users, urlDatabase) {
+  const user = users[req.session.user_id];
+  if (!user) {
+    res.status(401).send("Please log in or register to perform this action.");
+    return;
+  }
+
   const id = req.params.id;
-  if (!urlDatabase[id] || !urlDatabase[id].longURL) {
+  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
+
+  if (!longURL) {
+    // If the URL with the given ID does not exist, send a relevant HTML error message
     const errorMessage = `
       <html>
         <head>
@@ -70,19 +79,15 @@ const handleUrlNotFound = (req, res, next) => {
     res.status(404).send(errorMessage);
     return;
   }
-  next();
-};
 
-// Function to check ownership and handle permissions check for URLs
-const checkUrlOwnership = (users) => (req, res, next) => {
-  const id = req.params.id;
-  const user = users[req.session.user_id];
   if (urlDatabase[id].userID !== user.id) {
+    // If the URL does not belong to the logged-in user, display an error message
     res.status(403).send("You do not have permission to view this URL.");
     return;
   }
+
   next();
-};
+}
 
 module.exports = {
   getUserByEmail, 
@@ -90,5 +95,4 @@ module.exports = {
   urlsForUser, 
   isLoggedInFeatures, 
   isLoggedInUrls, 
-  handleUrlNotFound,
-  checkUrlOwnership };
+  checkURLAccess};

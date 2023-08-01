@@ -5,7 +5,13 @@ const PORT = 8080;
 
 const bcrypt = require("bcryptjs");
 
-const { getUserByEmail,generateRandomString, urlsForUser, isLoggedInFeatures, isLoggedInUrls} = require('./helpers');
+const { 
+  getUserByEmail,
+  generateRandomString, 
+  urlsForUser, 
+  isLoggedInFeatures, 
+  isLoggedInUrls, 
+  checkURLAccess} = require('./helpers');
 const { urlDatabase } = require('./database');
 const users = require('./users'); 
 
@@ -26,6 +32,8 @@ app.use((req, res, next) => {
   next();
 });
 
+
+
 app.get("/register", isLoggedInUrls(users), (req, res) => {
   const user = users[req.session.user_id];
   const templateVars = {
@@ -42,6 +50,17 @@ app.get("/login", isLoggedInUrls(users), (req, res) => {
   res.render("urls_login", templateVars);
 });
 
+app.get("/urls/new", isLoggedInFeatures(users), (req, res) => {
+  const user = users[req.session.user_id];
+  const templateVars = {
+    user,
+  };
+  res.render("urls_new", templateVars);
+});
+
+
+
+
 app.get("/urls", (req, res) => {
   const user = users[req.session.user_id];
   if (!user) {
@@ -53,7 +72,7 @@ app.get("/urls", (req, res) => {
     res.render("urls_index", templateVars);
     return;
   }
-  // If the user is logged in, show only their URLs
+    // If the user is logged in, show only their URLs
   const userURLs = urlsForUser(user.id);
   const templateVars = {
     user,
@@ -62,109 +81,32 @@ app.get("/urls", (req, res) => {
   res.render("urls_index", templateVars);
 });
 
-app.get("/urls/new", isLoggedInFeatures(users), (req, res) => {
-  const user = users[req.session.user_id];
-  const templateVars = {
-    user,
-  };
-  res.render("urls_new", templateVars);
-});
 
 app.get("/urls/:id", (req, res) => {
-  const user = users[req.session.user_id];
-  if (!user) {
-    res.status(401).send("Please log in or register to view this URL.");
-    return;
-  }
-  const id = req.params.id;
-  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
-  if (!longURL) {
-    // If the URL with the given ID does not exist, send a relevant HTML error message
-    const errorMessage = `
-      <html>
-        <head>
-          <title>Short URL not found</title>
-        </head>
-        <body>
-          <h2>Short URL not found</h2>
-          <p>The requested short URL with id '${id}' does not exist.</p>
-        </body>
-      </html>
-    `;
-    res.status(404).send(errorMessage);
-    return;
-  }
-  if (urlDatabase[id].userID !== user.id) {
-    // If the URL does not belong to the logged-in user, display an error message
-    res.status(403).send("You do not have permission to view this URL.");
-    return;
-  }
-  // If the user is logged in and the URL belongs to them, show the URL details
-  const templateVars = {
-    user,
-    id,
-    longURL,
-  };
-  res.render("urls_show", templateVars);
+  checkURLAccess(req, res, () => {
+    const user = users[req.session.user_id];
+    const id = req.params.id;
+    const longURL = urlDatabase[id].longURL;
+    const templateVars = {
+      user,
+      id,
+      longURL,
+    };
+    res.render("urls_show", templateVars);
+  }, users, urlDatabase);
 });
+
 
 app.get("/urls/:id/delete", (req, res) => {
-  const user = users[req.session.user_id];
-  if (!user) {
-    // If the user is not logged in, display an error message
-    res.status(401).send("Please log in or register to view this URL.");
-    return;
-  }
-  const id = req.params.id;
-  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
-  if (!longURL) {
-    // If the URL with the given ID does not exist, send a relevant HTML error message
-    const errorMessage = `
-      <html>
-        <head>
-          <title>Short URL not found</title>
-        </head>
-        <body>
-          <h2>Short URL not found</h2>
-          <p>The requested short URL with id '${id}' does not exist.</p>
-        </body>
-      </html>
-    `;
-    res.status(404).send(errorMessage);
-    return;
-  }
-  if (urlDatabase[id].userID !== user.id) {
-    // If the URL does not belong to the logged-in user, display an error message
-    res.status(403).send("You do not have permission to view this URL.");
-    return;
-  }
-  // If the user is logged in and the URL belongs to them, show the URL details
-  delete urlDatabase[id];
-  res.redirect("/urls");
+  checkURLAccess(req, res, () => {
+    const id = req.params.id;
+    delete urlDatabase[id];
+    res.redirect("/urls");
+  }, users, urlDatabase);
 });
 
 
-app.get("/u/:id", (req, res) => {
-  const id = req.params.id;
-  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
-  if (longURL) {
-    res.redirect(longURL); // Redirect to the longURL if it exists
-  } else {
-    // If the id does not exist in the urlDatabase, send a relevant HTML error message
-    const errorMessage = `
-      <html>
-        <head>
-          <title>Short URL not found</title>
-        </head>
-        <body>
-          <h2>Short URL not found</h2>
-          <p>The requested short URL with id '${id}' does not exist.</p>
-        </body>
-      </html>
-    `;
-    res.status(404).send(errorMessage);
-  }
-});
+
 
 app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   const user = users[req.session.user_id];
@@ -177,6 +119,21 @@ app.post("/urls", isLoggedInFeatures(users), (req, res) => {
   const id = generateRandomString();
   urlDatabase[id] = { longURL, userID: user.id };
   res.redirect(`/urls/${id}`); 
+});
+
+app.post("/urls/:id", (req, res) => {
+  const id = req.params.id;
+  const newLongURL = req.body.longURL; // Get the new longURL from the form data
+  // Check if the URL with the given ID exists in the urlDatabase
+  if (urlDatabase[id]) {
+    // Update the longURL for the given ID with the new value
+    urlDatabase[id].longURL = newLongURL;
+    // Redirect the client back to the /urls page
+    res.redirect("/urls");
+  } else {
+    // If the URL with the given ID does not exist, respond with a 404 error
+    res.status(404).send("URL not found");
+  }
 });
 
 app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
@@ -198,20 +155,18 @@ app.post("/urls/:id/delete", isLoggedInFeatures(users), (req, res) => {
   res.redirect("/urls");
 });
 
-app.post("/urls/:id", (req, res) => {
-  const id = req.params.id;
-  const newLongURL = req.body.longURL; // Get the new longURL from the form data
-  // Check if the URL with the given ID exists in the urlDatabase
-  if (urlDatabase[id]) {
-    // Update the longURL for the given ID with the new value
-    urlDatabase[id].longURL = newLongURL;
-    // Redirect the client back to the /urls page
-    res.redirect("/urls");
-  } else {
-    // If the URL with the given ID does not exist, respond with a 404 error
-    res.status(404).send("URL not found");
-  }
-});
+
+
+
+
+
+
+
+
+
+
+
+
 
 app.post("/login", (req, res) => {
   const email = req.body.email; // Get the email from the request body
@@ -255,6 +210,28 @@ app.post("/register", (req, res) => {
   users[userId] = { id: userId, email, password: hashedPassword }; // Save the hashed password
   req.session.user_id = userId;
   res.redirect("/urls");
+});
+
+app.get("/u/:id", (req, res) => {
+  const id = req.params.id;
+  const longURL = urlDatabase[id] ? urlDatabase[id].longURL : null;
+  if (longURL) {
+    res.redirect(longURL); // Redirect to the longURL if it exists
+  } else {
+    // If the id does not exist in the urlDatabase, send a relevant HTML error message
+    const errorMessage = `
+      <html>
+        <head>
+          <title>Short URL not found</title>
+        </head>
+        <body>
+          <h2>Short URL not found</h2>
+          <p>The requested short URL with id '${id}' does not exist.</p>
+        </body>
+      </html>
+    `;
+    res.status(404).send(errorMessage);
+  }
 });
 
 app.listen(PORT, () => {
